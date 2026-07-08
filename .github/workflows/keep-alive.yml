@@ -1,0 +1,19 @@
+name: Keep Supabase Alive
+
+# Runs automatically every 3 days, and can also be triggered manually
+# from the Actions tab if you ever want to test it immediately.
+on:
+  schedule:
+    - cron: '0 6 */3 * *'   # 6:00 AM UTC, every 3rd day
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase to keep project active
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/app_data?select=key&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"

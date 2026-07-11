@@ -1901,7 +1901,7 @@
 // SUPABASE CONFIG — replace these two values with your own project's
 // URL and anon/public key (Supabase dashboard → Project Settings → API)
 // ═══════════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://owduvaaeotowpnnauhix.supabase.co';
+const SUPABASE_URL = 'https://supabase.com/dashboard/project/owduvaaeotowpnnauhix';
 const SUPABASE_ANON_KEY = 'sb_publishable_uK-O-NPoRnW-pODciEpjsA_tyuUp5W1';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -2323,6 +2323,9 @@ function renderTable() {
             : `<button class="btn-gst-dl" style="border-color:rgba(245,168,74,0.45);color:var(--warn);background:rgba(245,168,74,0.08);" onclick="openGSTSetupModal(${t.id})" title="${t.invoiceNo?'GST not enabled — click to set up':'No invoice number — click to add'}">
                 ${t.invoiceNo ? '⚙ GST Setup' : '➕ Add Invoice'}
                </button>`
+        }${t.profitFirm!=='Sanchit' && t.invoiceNo
+            ? `<button class="btn-gst-dl" style="margin-top:4px;border-color:rgba(0,194,203,0.4);color:var(--teal);background:rgba(0,194,203,0.08);" onclick="generateBillInvoice(${t.id})" title="Customer-facing bill with GST breakup">⬇ Bill PDF</button>`
+            : ''
         }</td>
         <td style="white-space:nowrap;"><button class="icon-btn" onclick="openStatusModal(${t.id})" title="Update Payment Status" style="border-color:rgba(0,194,203,0.3);color:var(--teal);margin-right:4px;">✎</button><button class="icon-btn" onclick="deleteTransaction(${t.id})" title="Delete">✕</button></td>
       </tr>`;
@@ -3150,6 +3153,165 @@ function generateGSTInvoice(txnId) {
   const filename = `SkyNexusTravels_GST_Invoice_${t.invoiceNo || t.id}.pdf`;
   doc.save(filename);
   showToast('✓ GST Invoice downloaded!');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BILL INVOICE — customer-facing receipt. Unlike the GST Invoice
+// (which shows the company's GST liability on its commission), this
+// shows the FULL amount the customer paid, broken into base fare +
+// GST — so the customer can expense/claim it at their own office.
+// The received amount is treated as GST-inclusive and reverse-split.
+// ═══════════════════════════════════════════════════════════════
+function generateBillInvoice(txnId) {
+  const t = transactions.find(x => x.id === txnId);
+  if (!t) return;
+  if (typeof window.jspdf === 'undefined') {
+    showToast('⚠ PDF library loading, please try again.', 'warn'); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const W = 210;
+  const bX = 18, bTop = 18, bW = 174;
+  const colDesc = 75, colQty = 28, colRate = 28, colAmt = bW - colDesc - colQty - colRate;
+  const descX = bX, qtyX = bX + colDesc, rateX = qtyX + colQty, amtX = rateX + colRate;
+  const gLabel = 40, gSac = colDesc - gLabel;
+  const gstMid = colQty + colRate;
+  const gIgst  = gstMid / 3, gCgst = gstMid / 3, gSgst = gstMid - gIgst - gCgst;
+  const gAmt   = colAmt;
+  const gxLabel = bX, gxSac = bX + gLabel;
+  const gxIgst  = qtyX;
+  const gxCgst  = gxIgst + gIgst;
+  const gxSgst  = gxCgst + gCgst;
+  const gxAmt   = amtX;
+  const sumX    = gxSgst, sumW = bX + bW - sumX;
+
+  const pax        = parseInt(t.pax) || 1;
+  const totalPaid  = t.recvAmt || 0;           // full amount customer paid
+  const baseAmt    = totalPaid / 1.18;          // reverse-calculated pre-tax fare
+  const gstAmt     = totalPaid - baseAmt;       // GST portion (base+gst = totalPaid exactly)
+  const rate       = baseAmt / pax;
+  const depCity    = t.dep ? t.dep.split('(')[0].trim() : '';
+  const arrCity    = t.arr ? t.arr.split('(')[0].trim() : '';
+  const descText   = t.pnr ? `${depCity} to ${arrCity} Flight Tickets (PNR: ${t.pnr})` : `${depCity} to ${arrCity} Flight Tickets`;
+
+  const ln = (x1,y1,x2,y2,lw=0.3) => { doc.setLineWidth(lw); doc.line(x1,y1,x2,y2); };
+  const fnt = (style, size) => { doc.setFont('helvetica', style); doc.setFontSize(size); };
+  const fmtNum = n => Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  doc.setLineWidth(0.6); doc.rect(bX, bTop, bW, 219);
+
+  const headerY = 25;
+  fnt('bold', 13); doc.text('TAX INVOICE', bX + 5, headerY);
+  fnt('bolditalic', 13); doc.text('SKY NEXUS TRAVELS', bX + bW - 5, headerY, { align:'right' });
+  ln(bX, 28, bX+bW, 28, 0.4);
+
+  fnt('bold', 8.5); doc.text('SKY NEXUS TRAVELS', bX + 5, 34);
+  fnt('normal', 7.5);
+  doc.text('Fly the New Feeling', bX + 5, 38);
+  doc.text('GST: [UPDATE GST NUMBER]', bX + 5, 42);
+
+  const metaX = bX + bW * 0.55;
+  fnt('bold', 7.5);
+  doc.text('INVOICE NO.  :', metaX, 34);
+  doc.text('INVOICE DATE :', metaX, 39.5);
+  doc.text('Balance Status :', metaX, 45);
+  fnt('normal', 7.5);
+  doc.text(t.invoiceNo || '', metaX + 33, 34);
+  doc.text(t.date || '', metaX + 33, 39.5);
+
+  ln(bX, 52, bX+bW, 52, 0.4);
+
+  fnt('bold', 8.5); doc.text('Bill To :', bX + 10, 59);
+  fnt('normal', 9); doc.text(t.customer || '', bX + 28, 59);
+  ln(bX, 71, bX+bW, 71, 0.4);
+
+  const thTop = 71, thBot = 78, thMid = 75.5;
+  fnt('bold', 8.5);
+  doc.text('Description', descX + colDesc/2, thMid, { align:'center' });
+  doc.text('Quantity',    qtyX  + colQty/2,  thMid, { align:'center' });
+  doc.text('Rate',        rateX + colRate/2, thMid, { align:'center' });
+  doc.text('AMOUNT',      amtX  + colAmt/2,  thMid, { align:'center' });
+  [descX, qtyX, rateX, amtX, bX+bW].forEach(x => ln(x, thTop, x, thBot, 0.35));
+  ln(bX, thBot, bX+bW, thBot, 0.4);
+
+  const rowH = 7;
+  const r1Top = thBot, r1Mid = r1Top + rowH/2 + 1.2;
+  fnt('normal', 8);
+  const maxDescW = colDesc - 4;
+  const descLines = doc.splitTextToSize(descText, maxDescW);
+  doc.text(descLines[0], descX + 2, r1Mid);
+  doc.text(String(pax), qtyX + colQty/2, r1Mid, { align:'center' });
+  doc.text('Rs.' + fmtNum(rate), rateX + colRate - 1, r1Mid, { align:'right' });
+  doc.text('Rs.' + fmtNum(baseAmt), bX+bW - 3, r1Mid, { align:'right' });
+
+  for (let i = 0; i < 3; i++) {
+    const rBot = thBot + (i+1)*rowH;
+    ln(bX, rBot, bX+bW, rBot, 0.25);
+    [descX, qtyX, rateX, amtX, bX+bW].forEach(x => ln(x, thBot, x, rBot, 0.3));
+  }
+  const rowEndY = thBot + 3*rowH;
+
+  const gthTop = rowEndY, gthBot = gthTop + 7, gthMid = gthTop + 4.8;
+  fnt('bold', 7.5);
+  doc.text('GST (18%)', gxLabel + 2, gthMid);
+  doc.text('SAC CODE', gxSac  + gSac/2,  gthMid, { align:'center' });
+  doc.text('IGST',     gxIgst + gIgst/2, gthMid, { align:'center' });
+  doc.text('CGST',     gxCgst + gCgst/2, gthMid, { align:'center' });
+  doc.text('SGST',     gxSgst + gSgst/2, gthMid, { align:'center' });
+  doc.text('AMOUNT',   gxAmt  + gAmt/2,  gthMid, { align:'center' });
+  [gxLabel, gxSac, gxIgst, gxCgst, gxSgst, gxAmt, bX+bW].forEach(x => ln(x, gthTop, x, gthBot, 0.35));
+  ln(bX, gthBot, bX+bW, gthBot, 0.4);
+
+  const gr1Top = gthBot, gr1Mid = gr1Top + 4.8;
+  fnt('normal', 8);
+  doc.text('998559',        gxSac  + gSac/2,  gr1Mid, { align:'center' });
+  doc.text('9%',            gxCgst + gCgst/2, gr1Mid, { align:'center' });
+  doc.text('9%',            gxSgst + gSgst/2, gr1Mid, { align:'center' });
+  doc.text('Rs.' + fmtNum(gstAmt), bX+bW - 3, gr1Mid, { align:'right' });
+
+  for (let i = 0; i < 2; i++) {
+    const rBot = gthBot + (i+1)*7;
+    ln(bX, rBot, bX+bW, rBot, 0.25);
+    [gxLabel, gxSac, gxIgst, gxCgst, gxSgst, gxAmt, bX+bW].forEach(x => ln(x, gthBot, x, rBot, 0.3));
+  }
+  const gEndY = gthBot + 14;
+  ln(bX, gEndY, bX+bW, gEndY, 0.4);
+
+  const sumTop = gEndY;
+  const sumLabelBot = sumTop + 6, sumLblMid = sumTop + 4.2;
+  fnt('bold', 8);
+  doc.text('SUMMARY', sumX + sumW/2, sumLblMid, { align:'center' });
+  ln(sumX, sumLabelBot, bX+bW, sumLabelBot, 0.3);
+
+  const totalTop = sumLabelBot, totalBot = totalTop + 10;
+  fnt('bold', 8);  doc.text('Total',          sumX + 3, totalTop + 4.5);
+  fnt('normal', 7); doc.text('(All Inclusive)', sumX + 3, totalTop + 8.2);
+  fnt('bold', 9);  doc.text('Rs. ' + fmtNum(totalPaid), bX+bW - 3, totalTop + 6.2, { align:'right' });
+  ln(sumX, totalBot, bX+bW, totalBot, 0.4);
+  ln(sumX, sumTop,   sumX,  totalBot, 0.4);
+  ln(bX,   totalBot, sumX,  totalBot, 0.25);
+
+  const wordsTop = totalBot, wordsBot = wordsTop + 7, wordsMid = wordsTop + 4.8;
+  const labelW2 = 38;
+  doc.setLineWidth(0.4); doc.rect(bX, wordsTop, labelW2, 7);
+  fnt('bold', 7.5); doc.text('AMOUNT IN WORDS :', bX + 2, wordsMid);
+  doc.rect(bX + labelW2, wordsTop, bW - labelW2, 7);
+  fnt('normal', 7);
+  const wordsStr = numToWords(totalPaid);
+  const wordsLines = doc.splitTextToSize(wordsStr, bW - labelW2 - 4);
+  doc.text(wordsLines[0], bX + labelW2 + 2, wordsMid);
+  ln(bX, wordsBot, bX+bW, wordsBot, 0.6);
+
+  const footerY = wordsBot + 9;
+  fnt('normal', 7.5);
+  doc.text('THIS IS A COMPUTER GENERATED INVOICE HENCE DOES NOT REQUIRE ANY INITIALS', W/2, footerY, { align:'center' });
+  fnt('bold', 9);
+  doc.text('THANK YOU FOR YOUR BUSINESS', W/2, footerY + 7, { align:'center' });
+
+  const filename = `SkyNexusTravels_Bill_Invoice_${t.invoiceNo || t.id}.pdf`;
+  doc.save(filename);
+  showToast('✓ Bill Invoice downloaded!');
 }
 
 // ═══════════════════════════════════════════════

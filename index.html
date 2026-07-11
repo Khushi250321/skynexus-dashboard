@@ -3125,7 +3125,7 @@ function generateGSTInvoice(txnId) {
   const totalTop = sumLabelBot, totalBot = totalTop + 10;
   fnt('bold', 8);  doc.text('Total',          sumX + 3, totalTop + 4.5);
   fnt('normal', 7); doc.text('(All Inclusive)', sumX + 3, totalTop + 8.2);
-  fnt('bold', 9);  doc.text('Rs. 0.00',    bX+bW - 3, totalTop + 6.2, { align:'right' });
+  fnt('bold', 9);  doc.text('Rs. ' + fmtNum(gross + gstAmt), bX+bW - 3, totalTop + 6.2, { align:'right' });
   ln(sumX, totalBot, bX+bW, totalBot, 0.4);
   ln(sumX, sumTop,   sumX,  totalBot, 0.4);
   ln(bX,   totalBot, sumX,  totalBot, 0.25);
@@ -3136,7 +3136,7 @@ function generateGSTInvoice(txnId) {
   fnt('bold', 7.5); doc.text('AMOUNT IN WORDS :', bX + 2, wordsMid);
   doc.rect(bX + labelW2, wordsTop, bW - labelW2, 7);
   fnt('normal', 7);
-  const wordsStr = numToWords(gstAmt);
+  const wordsStr = numToWords(gross + gstAmt);
   const wordsLines = doc.splitTextToSize(wordsStr, bW - labelW2 - 4);
   doc.text(wordsLines[0], bX + labelW2 + 2, wordsMid);
   ln(bX, wordsBot, bX+bW, wordsBot, 0.6);

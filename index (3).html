@@ -1525,7 +1525,7 @@
       <h3>◈ Firm Profitability</h3>
       <div class="firm-split" style="margin-bottom:14px;">
         <div class="firm-card sky-card">
-          <div class="firm-card-label">Chugh Travels</div>
+          <div class="firm-card-label">Sky Nexus Travels</div>
           <div class="firm-card-value" id="a-sky-profit">₹0</div>
           <div class="stat-sub" style="margin-top:4px;" id="a-sky-count">0 bookings</div>
         </div>
@@ -2972,7 +2972,7 @@ function exportCSV(){
   const rows=transactions.map(t=>[t.id,t.date,t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'}));
-  a.download='ChughTravels_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.download='SkyNexusTravels_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
 }
 
@@ -3041,10 +3041,10 @@ function generateGSTInvoice(txnId) {
 
   const headerY = 25;
   fnt('bold', 13); doc.text('TAX INVOICE', bX + 5, headerY);
-  fnt('bolditalic', 13); doc.text('CHUGH TRAVELS', bX + bW - 5, headerY, { align:'right' });
+  fnt('bolditalic', 13); doc.text('SKY NEXUS TRAVELS', bX + bW - 5, headerY, { align:'right' });
   ln(bX, 28, bX+bW, 28, 0.4);
 
-  fnt('bold', 8.5); doc.text('CHUGH TRAVELS', bX + 5, 34);
+  fnt('bold', 8.5); doc.text('SKY NEXUS TRAVELS', bX + 5, 34);
   fnt('normal', 7.5);
   doc.text('Fly the New Feeling', bX + 5, 38);
   doc.text('GST: [UPDATE GST NUMBER]', bX + 5, 42);
@@ -3147,7 +3147,7 @@ function generateGSTInvoice(txnId) {
   fnt('bold', 9);
   doc.text('THANK YOU FOR YOUR BUSINESS', W/2, footerY + 7, { align:'center' });
 
-  const filename = `ChughTravels_GST_Invoice_${t.invoiceNo || t.id}.pdf`;
+  const filename = `SkyNexusTravels_GST_Invoice_${t.invoiceNo || t.id}.pdf`;
   doc.save(filename);
   showToast('✓ GST Invoice downloaded!');
 }
@@ -3241,7 +3241,7 @@ function openEditModal(txnId) {
   document.getElementById('em-pay-amt').value = t.payAmt || 0;
   setSelect('em-platform', t.platform || '');
   setSelect('em-paid-via', t.paidVia || '');
-  setSelect('em-firm', t.profitFirm || 'Chugh Travels');
+  setSelect('em-firm', t.profitFirm || 'Sky Nexus Travels');
   setSelect('em-gst', t.gst || 'No');
   setSelect('em-comm', t.commApplicable || 'Not Applicable');
   const commDet = document.getElementById('em-comm-details');
@@ -3295,7 +3295,7 @@ function saveEditModal() {
   // Recalculate financials
   t.grossProfit = t.recvAmt - t.payAmt;
   t.commAmt = calcCommAmt(t);
-  t.gstPayable = (t.profitFirm === 'Sky Nexus Travels' && t.gst === 'Yes' && t.invoiceNo) ? t.grossProfit * 0.18 : 0;
+  t.gstPayable = (t.profitFirm === 'Sky Nexus Travels' && t.gst === 'Yes') ? t.grossProfit * 0.18 : 0;
   t.netProfit = t.grossProfit - t.commAmt - t.gstPayable;
   saveData(); renderTable(); renderAnalytics(); closeEditModal();
   showToast('✓ Transaction updated successfully!');
@@ -3623,7 +3623,7 @@ function handleCSVFile(e) {
               payAmt:      parseFloat(cols[11]) || 0,
               platform:    cols[12] || '',
               paidVia:     cols[13] || '',
-              profitFirm:  cols[14] || 'Chugh Travels',
+              profitFirm:  cols[14] || 'Sky Nexus Travels',
               gst:         cols[15] || 'No',
               status:      cols[16] || 'Pending',
               partialPaid: parseFloat(cols[17]) || 0,
@@ -3654,7 +3654,7 @@ function handleCSVFile(e) {
               payAmt:      parseFloat(cols[8])  || 0,
               platform:    cols[9]  || '',
               paidVia:     cols[10] || '',
-              profitFirm:  cols[11] || 'Chugh Travels',
+              profitFirm:  cols[11] || 'Sky Nexus Travels',
               gst:         cols[12] || 'No',
               status:      cols[13] || 'Pending',
               partialPaid: parseFloat(cols[14]) || 0,
@@ -3880,6 +3880,7 @@ async function handleLogin() {
     return;
   }
   await showDashboard();
+  startInactivityWatch();
 }
 
 async function handleLogout() {
@@ -3887,13 +3888,62 @@ async function handleLogout() {
   location.reload();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// INACTIVITY TIMEOUT — auto sign-out after a period of no activity,
+// even though the login session itself persists in the browser.
+// ═══════════════════════════════════════════════════════════════
+const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000; // 4 hours
+const LAST_ACTIVITY_KEY = 'chugh_last_activity';
+
+function recordActivity() {
+  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+}
+
+function isSessionExpiredByInactivity() {
+  const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+  if (!last) return false; // no record yet — treat as fresh, don't expire
+  return (Date.now() - last) > INACTIVITY_LIMIT_MS;
+}
+
+function startInactivityWatch() {
+  recordActivity();
+  // Update the timestamp on real user interaction (throttled so we
+  // aren't writing to localStorage on every single mouse pixel-move).
+  let lastWrite = 0;
+  ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, () => {
+      const now = Date.now();
+      if (now - lastWrite > 60000) { // at most once per minute
+        lastWrite = now;
+        recordActivity();
+      }
+    }, { passive: true });
+  });
+  // Periodically check whether the idle limit has been exceeded while
+  // the tab is sitting open and unused.
+  setInterval(async () => {
+    if (isSessionExpiredByInactivity()) {
+      await sb.auth.signOut();
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+      location.reload();
+    }
+  }, 5 * 60 * 1000); // check every 5 minutes
+}
+
 // On page load, check whether a session already exists (e.g. the
 // employee logged in earlier and closed the tab) and skip straight
-// to the dashboard if so.
+// to the dashboard if so — unless they've been inactive too long,
+// in which case force a fresh login.
 async function initAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
-    await showDashboard();
+    if (isSessionExpiredByInactivity()) {
+      await sb.auth.signOut();
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+    } else {
+      await showDashboard();
+      startInactivityWatch();
+    }
   }
   // Allow pressing Enter in the password field to submit
   document.getElementById('authPassword').addEventListener('keydown', e => {

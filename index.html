@@ -3093,6 +3093,11 @@ function numToWords(amount) {
   if (paise > 0) result += (result ? ' and ' : '') + convert(paise) + ' Paise';
   return (result || 'Zero') + ' Only';
 }
+function formatInvoiceDate(isoDate) {
+  if (!isoDate || isoDate.length < 10) return isoDate || '';
+  const [y, m, d] = isoDate.split('-');
+  return `${d}-${m}-${y}`;
+}
 
 function generateGSTInvoice(txnId) {
   const t = transactions.find(x => x.id === txnId);
@@ -3149,8 +3154,7 @@ function generateGSTInvoice(txnId) {
   doc.text('Balance Status :', metaX, 45);
   fnt('normal', 7.5);
   doc.text(t.invoiceNo || '', metaX + 33, 34);
-  doc.text(t.date || '', metaX + 33, 39.5);
-
+  doc.text(formatInvoiceDate(t.date), metaX + 33, 39.5);
   ln(bX, 52, bX+bW, 52, 0.4);
 
   fnt('bold', 8.5); doc.text('Bill To :', bX + 10, 59);
@@ -3308,7 +3312,7 @@ function generateBillInvoice(txnId) {
   doc.text('Balance Status :', metaX, 45);
   fnt('normal', 7.5);
   doc.text(t.invoiceNo || '', metaX + 33, 34);
-  doc.text(t.date || '', metaX + 33, 39.5);
+  doc.text(formatInvoiceDate(t.date), metaX + 33, 39.5);
 
   ln(bX, 52, bX+bW, 52, 0.4);
 

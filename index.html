@@ -1006,18 +1006,23 @@
       <div class="form-group" style="grid-column: 1 / -1;">
         <label>Transaction Nature <span class="req">✦</span></label>
         <div class="toggle-group">
-          <input type="radio" name="txntype" id="txt-new" value="New Booking" checked>
+          <input type="radio" name="txntype" id="txt-new" value="New Booking" checked onchange="onTxnTypeChange()">
           <label for="txt-new">🆕 New Booking</label>
-          <input type="radio" name="txntype" id="txt-cancel" value="Cancellation">
+          <input type="radio" name="txntype" id="txt-cancel" value="Cancellation" onchange="onTxnTypeChange()">
           <label for="txt-cancel">✖ Cancellation</label>
-          <input type="radio" name="txntype" id="txt-datechange" value="Date Change">
+          <input type="radio" name="txntype" id="txt-datechange" value="Date Change" onchange="onTxnTypeChange()">
           <label for="txt-datechange">🔁 Date Change</label>
+        </div>
+        <div class="cond-block" id="related-booking-block" style="margin-top:10px;">
+          <label>Original Booking — PNR or Invoice No. <span class="req">✦</span></label>
+          <input type="text" id="f-related-ref" placeholder="e.g. ABC123 or CT/2024/001" style="text-transform:uppercase;">
         </div>
       </div>
 
       <div class="form-group">
         <label>Transaction Date <span class="req">✦</span></label>
-        <input type="date" id="f-date">
+        <input type="date" id="f-date" oninput="updateDateConfirm('f-date','f-date-confirm')">
+        <span id="f-date-confirm" style="display:block;font-size:11px;color:var(--text-sub);margin-top:4px;font-family:'JetBrains Mono',monospace;"></span>
       </div>
       <div class="form-group">
         <label>Customer Name <span class="req">✦</span></label>
@@ -1154,7 +1159,7 @@
           <option>Sahil – Sky Deal Fares</option><option>MakeMyTrip Normal</option>
           <option>GoIbibo</option><option>Cleartrip</option><option>Yatra</option>
           <option>Ixigo</option><option>ly.com/Hopegoo</option><option>Bhagwati</option>
-          <option>Grace</option>
+          <option>Grace</option><option>Indigo Official Website</option>
           <option value="other">Other (specify)</option>
         </select>
         <input type="text" class="other-input" id="f-platform-other" placeholder="Enter platform name">
@@ -1707,7 +1712,8 @@
   <div style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px;" id="edit-modal-fields">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Customer Name</label><input type="text" id="em-customer"></div>
-      <div><label>Transaction Date</label><input type="date" id="em-date"></div>
+      <div><label>Transaction Date</label><input type="date" id="em-date" oninput="updateDateConfirm('em-date','em-date-confirm')">
+        <span id="em-date-confirm" style="display:block;font-size:11px;color:var(--text-sub);margin-top:4px;font-family:'JetBrains Mono',monospace;"></span></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>PNR Number</label><input type="text" id="em-pnr" style="text-transform:uppercase;"></div>
@@ -1718,7 +1724,8 @@
       <div><label>Trip Type</label><select id="em-trip"><option>One Way</option><option>Round Trip</option></select></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div><label>Transaction Nature</label><select id="em-txntype"><option>New Booking</option><option>Cancellation</option><option>Date Change</option></select></div>
+      <div><label>Transaction Nature</label><select id="em-txntype" onchange="onEmTxnTypeChange()"><option>New Booking</option><option>Cancellation</option><option>Date Change</option></select></div>
+      <div id="em-related-ref-wrap" style="display:none;"><label>Original Booking PNR/Invoice No.</label><input type="text" id="em-related-ref" style="text-transform:uppercase;"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Receivable Amount (₹)</label><input type="number" id="em-recv-amt" min="0" step="0.01"></div>
@@ -1736,9 +1743,11 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Payable Amount (₹)</label><input type="number" id="em-pay-amt" min="0" step="0.01"></div>
-      <div><label>Platform</label><select id="em-platform">
-        <option>MyPartner</option><option>MultiCliq</option><option>FlyShop</option><option>Wego</option><option>Wego</option><option>Akbar</option><option>Ghai</option><option>Arjun Ghai</option><option>Sahil – Sky Deal Fares</option><option>MakeMyTrip Normal</option><option>GoIbibo</option><option>Cleartrip</option><option>Yatra</option><option>Ixigo</option><option>ly.com/Hopegoo</option><option>Bhagwati</option><option>Grace</option>
-      </select></div>
+      <div><label>Platform</label><select id="em-platform" onchange="handleEmOther('platform')">
+        <option>MyPartner</option><option>MultiCliq</option><option>FlyShop</option><option>Wego</option><option>Wego</option><option>Akbar</option><option>Ghai</option><option>Arjun Ghai</option><option>Sahil – Sky Deal Fares</option><option>MakeMyTrip Normal</option><option>GoIbibo</option><option>Cleartrip</option><option>Yatra</option><option>Ixigo</option><option>ly.com/Hopegoo</option><option>Bhagwati</option><option>Grace</option><option>Indigo Official Website</option>
+        <option value="other">Other (specify)</option>
+      </select>
+      <input type="text" class="other-input" id="em-platform-other" placeholder="Enter platform name"></div>
     </div>
     <div><label>Paid Via</label><select id="em-paid-via">
       <option>Sanchit Savings</option><option>SkyNexus Current</option>
@@ -1919,8 +1928,8 @@
 // SUPABASE CONFIG — replace these two values with your own project's
 // URL and anon/public key (Supabase dashboard → Project Settings → API)
 // ═══════════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://owduvaaeotowpnnauhix.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_uK-O-NPoRnW-pODciEpjsA_tyuUp5W1';
+const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let transactions = [];
@@ -2036,6 +2045,7 @@ function init() {
   const today = new Date();
   document.getElementById('currentDate').textContent = today.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('f-date').value = today.toISOString().split('T')[0];
+  updateDateConfirm('f-date','f-date-confirm');
   ['f-dep','f-arr'].forEach(id => {
     const s = document.getElementById(id);
     s.innerHTML = '<option value="">— Select Airport —</option>';
@@ -2063,8 +2073,22 @@ function handleAirportOther(t) {
   const s = document.getElementById(`f-${t}`), o = document.getElementById(`f-${t}-other`);
   s.value === 'other' ? (o.classList.add('visible'), o.focus()) : o.classList.remove('visible');
 }
+function updateDateConfirm(inputId, labelId) {
+  const val = document.getElementById(inputId).value; // always 'YYYY-MM-DD'
+  const label = document.getElementById(labelId);
+  if (!val) { label.textContent = ''; return; }
+  const [y, m, d] = val.split('-');
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  label.textContent = `✓ ${d} ${monthNames[parseInt(m,10)-1]} ${y}`;
+}
+
 function handleOther(id) {
   const s = document.getElementById(`f-${id}`), o = document.getElementById(`f-${id}-other`);
+  s.value === 'other' ? (o.classList.add('visible'), o.focus()) : o.classList.remove('visible');
+}
+
+function handleEmOther(id) {
+  const s = document.getElementById(`em-${id}`), o = document.getElementById(`em-${id}-other`);
   s.value === 'other' ? (o.classList.add('visible'), o.focus()) : o.classList.remove('visible');
 }
 
@@ -2130,6 +2154,18 @@ function onCommChange() {
   updateCommPreview();
 }
 
+function onTxnTypeChange() {
+  const v = document.querySelector('input[name="txntype"]:checked').value;
+  const box = document.getElementById('related-booking-block');
+  (v === 'Cancellation' || v === 'Date Change') ? box.classList.add('visible') : box.classList.remove('visible');
+}
+
+function onEmTxnTypeChange() {
+  const v = document.getElementById('em-txntype').value;
+  document.getElementById('em-related-ref-wrap').style.display =
+    (v === 'Cancellation' || v === 'Date Change') ? 'block' : 'none';
+}
+
 function updateCommPreview() {
   if (document.querySelector('input[name="comm"]:checked')?.value !== 'Yes') return;
   const recv = parseFloat(document.getElementById('f-recv-amt').value) || 0;
@@ -2160,6 +2196,8 @@ function calcCommAmt(t) {
 
 function saveTransaction() {
   const txnType = document.querySelector('input[name="txntype"]:checked').value;
+  const relatedRef = (txnType === 'Cancellation' || txnType === 'Date Change')
+    ? document.getElementById('f-related-ref').value.trim().toUpperCase() : '';
   const date = document.getElementById('f-date').value;
   const customer = document.getElementById('f-customer').value.trim();
   const invoiceNo = document.getElementById('f-invoice-no').value.trim();
@@ -2222,13 +2260,16 @@ function saveTransaction() {
   if (!date||!customer||!pax||!dep||!arr||!recvTo||!platform||!paidVia) {
     showToast('⚠ Please fill all required fields.','warn'); return;
   }
+  if ((txnType === 'Cancellation' || txnType === 'Date Change') && !relatedRef) {
+    showToast('⚠ Please enter the original booking PNR/Invoice No.','warn'); return;
+  }
   const grossProfit = recvAmt - payAmt;
   const commAmt = calcCommAmt({commApplicable,commType,commValue,recvAmt,payAmt});
   const gstPayable = (profitFirm === 'Sky Nexus Travels' && gst === 'Yes') ? grossProfit * 0.18 : 0;
   const netProfit = grossProfit - commAmt - gstPayable;
 
   transactions.unshift({
-    id:Date.now(), date, txnType, invoiceNo, pnr, customer, pax, tripType, dep, arr,
+    id:Date.now(), date, txnType, relatedRef, invoiceNo, pnr, customer, pax, tripType, dep, arr,
     recvAmt, recvTo, payAmt, platform, paidVia,
     profitFirm, gst, commApplicable, commTo, commType, commValue, commAmt,
     gstPayable, status, partialPaid, notes, grossProfit, netProfit
@@ -2243,7 +2284,7 @@ function saveData() { pushToCloud('chugh_v1', transactions); }
 function clearForm() {
   ['f-customer','f-invoice-no','f-pnr','f-dep-other','f-arr-other','f-recv-amt','f-recv-to-other',
    'f-pay-amt','f-platform-other','f-paid-via-other','f-notes','f-partial-paid',
-   'f-comm-to-custom','f-comm-value'].forEach(id => {
+   'f-comm-to-custom','f-comm-value','f-related-ref'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2258,8 +2299,10 @@ function clearForm() {
   document.querySelector('.status-pill.pending').classList.add('selected');
   document.querySelector('.status-pill.pending input').checked = true;
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  updateDateConfirm('f-date','f-date-confirm');
   document.getElementById('tt-one').checked = true;
   document.getElementById('txt-new').checked = true;
+  document.getElementById('related-booking-block').classList.remove('visible');
   document.getElementById('pf-sky').checked = true;
   document.getElementById('gst-no').checked = true;
   document.getElementById('comm-no').checked = true;
@@ -2322,7 +2365,7 @@ function renderTable() {
         :`<span class="amount-muted">—</span>`;
       return `<tr>
         <td><span class="cell-muted">${start+i+1}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;display:block;">${t.date}</span></td>
-        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;"><strong>${t.customer}</strong>${t.txnType && t.txnType!=='New Booking'?`<span class="tag" style="font-size:9px;display:block;width:fit-content;margin-top:2px;${t.txnType==='Cancellation'?'color:var(--danger);border-color:rgba(239,83,80,0.4);background:rgba(239,83,80,0.08);':'color:var(--warn);border-color:rgba(255,167,38,0.4);background:rgba(255,167,38,0.08);'}">${t.txnType==='Cancellation'?'✖ Cancellation':'🔁 Date Change'}</span>`:''}${t.notes?`<span class="cell-muted" title="${t.notes}">${t.notes.substring(0,18)}${t.notes.length>18?'…':''}</span>`:''}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;"><strong>${t.customer}</strong>${t.txnType && t.txnType!=='New Booking'?`<span class="tag" style="font-size:9px;display:block;width:fit-content;margin-top:2px;${t.txnType==='Cancellation'?'color:var(--danger);border-color:rgba(239,83,80,0.4);background:rgba(239,83,80,0.08);':'color:var(--warn);border-color:rgba(255,167,38,0.4);background:rgba(255,167,38,0.08);'}" title="${t.relatedRef?'Original booking: '+t.relatedRef:''}">${t.txnType==='Cancellation'?'✖ Cancellation':'🔁 Date Change'}${t.relatedRef?' · '+t.relatedRef:''}</span>`:''}${t.notes?`<span class="cell-muted" title="${t.notes}">${t.notes.substring(0,18)}${t.notes.length>18?'…':''}</span>`:''}</td>
         <td style="font-weight:600;text-align:center;">${t.pax||'—'}</td>
         <td><div class="route-cell"><span class="route-from">${getCode(t.dep)}</span><span class="route-track"><span class="route-line"></span><span class="route-dot-l"></span><span class="route-plane">✈</span><span class="route-dot-r"></span></span><span class="route-to">${getCode(t.arr)}</span></div></td>
         <td><span class="tag" style="font-size:10px;">${t.tripType==='One Way'?'1-Way':'Rnd'}</span></td>
@@ -3017,8 +3060,8 @@ function exportCSV(){
     showToast('No transactions found for that month.', 'warn');
     return;
   }
-  const h=['ID','Date','Txn Nature','Customer','Invoice No','PNR','Pax','Trip','Dep','Arr','Receivable','Recv To','Payable','Platform','Paid Via','Firm','GST','Status','Partial Paid','Gross Profit','Comm?','Comm To','Comm Type','Comm Value','Comm Amt','GST Payable','Net Profit','Notes'];
-  const rows=filtered.map(t=>[t.id,t.date,t.txnType||'New Booking',t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const h=['ID','Date','Txn Nature','Related Booking Ref','Customer','Invoice No','PNR','Pax','Trip','Dep','Arr','Receivable','Recv To','Payable','Platform','Paid Via','Firm','GST','Status','Partial Paid','Gross Profit','Comm?','Comm To','Comm Type','Comm Value','Comm Amt','GST Payable','Net Profit','Notes'];
+  const rows=filtered.map(t=>[t.id,t.date,t.txnType||'New Booking',t.relatedRef||'',t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'}));
   const suffix = month ? '_' + month : '_' + new Date().toISOString().split('T')[0];
@@ -3425,6 +3468,7 @@ function openEditModal(txnId) {
   const t = transactions.find(x => x.id === txnId);
   if (!t) return;
   _editTxnId = txnId;
+  document.getElementById('em-platform-other').classList.remove('visible');
   // Helper: set select value, add option if not found
   function setSelect(id, val) {
     const sel = document.getElementById(id);
@@ -3441,11 +3485,15 @@ function openEditModal(txnId) {
   document.getElementById('edit-modal-sub').textContent = `ID: ${t.id} · ${t.customer} · ${t.date}`;
   document.getElementById('em-customer').value = t.customer || '';
   document.getElementById('em-date').value = t.date || '';
+  updateDateConfirm('em-date','em-date-confirm');
   document.getElementById('em-pnr').value = t.pnr || '';
   document.getElementById('em-invoice').value = t.invoiceNo || '';
   setSelect('em-pax', t.pax || '1');
   setSelect('em-trip', t.tripType || 'One Way');
   setSelect('em-txntype', t.txnType || 'New Booking');
+  document.getElementById('em-related-ref').value = t.relatedRef || '';
+  document.getElementById('em-related-ref-wrap').style.display =
+    (t.txnType === 'Cancellation' || t.txnType === 'Date Change') ? 'block' : 'none';
   document.getElementById('em-recv-amt').value = t.recvAmt || 0;
   setSelect('em-recv-to', t.recvTo || '');
   document.getElementById('em-pay-amt').value = t.payAmt || 0;
@@ -3487,10 +3535,15 @@ function saveEditModal() {
   t.pax = document.getElementById('em-pax').value;
   t.tripType = document.getElementById('em-trip').value;
   t.txnType = document.getElementById('em-txntype').value;
+  t.relatedRef = (t.txnType === 'Cancellation' || t.txnType === 'Date Change')
+    ? document.getElementById('em-related-ref').value.trim().toUpperCase() : '';
   t.recvAmt = parseFloat(document.getElementById('em-recv-amt').value) || 0;
   t.recvTo = document.getElementById('em-recv-to').value.trim();
   t.payAmt = parseFloat(document.getElementById('em-pay-amt').value) || 0;
-  t.platform = document.getElementById('em-platform').value.trim();
+  {
+    const platSel = document.getElementById('em-platform').value;
+    t.platform = platSel === 'other' ? document.getElementById('em-platform-other').value.trim() : platSel;
+  }
   t.paidVia = document.getElementById('em-paid-via').value.trim();
   t.profitFirm = document.getElementById('em-firm').value;
   t.gst = (t.profitFirm === 'Sanchit') ? 'No' : document.getElementById('em-gst').value;

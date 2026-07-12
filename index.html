@@ -1365,6 +1365,9 @@
       <select class="filter-select" id="filter-recv-to" onchange="renderTable()"></select>
       <input type="file" id="csv-file-input" accept=".csv" style="display:none;" onchange="handleCSVFile(event)">
       <button class="btn-secondary" style="padding:10px 20px;font-size:13px;border-color:rgba(93,170,255,0.3);color:var(--accent-light);" onclick="document.getElementById('csv-file-input').click()">⬆ Upload</button>
+      <select class="filter-select" id="download-month-select">
+        <option value="">All Months</option>
+      </select>
       <button class="btn-primary" style="padding:10px 20px;font-size:13px;" onclick="exportCSV()">⬇ Download</button>
     </div>
   </div>
@@ -2268,6 +2271,7 @@ function sortTable(k) {
 function renderTable() {
   let data = getFiltered();
   updateFilterOptions();
+  populateMonthDownloadFilter();
   data.sort((a,b) => {
     const va=a[sortKey], vb=b[sortKey];
     return (typeof va==='string' ? va.localeCompare(vb) : va-vb) * sortDir;
@@ -2970,12 +2974,38 @@ function switchTab(view,btn){
   if(view==='ledger'){renderTable();updateFilterOptions();}
   if(view==='analytics')renderAnalytics();
 }
+function populateMonthDownloadFilter(){
+  const sel = document.getElementById('download-month-select');
+  if (!sel) return;
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const seen = new Set();
+  transactions.forEach(t => {
+    if (t.date && t.date.length >= 7) seen.add(t.date.slice(0,7)); // 'YYYY-MM'
+  });
+  const months = [...seen].sort(); // chronological
+  const current = sel.value; // preserve selection across re-renders
+  sel.innerHTML = '<option value="">All Months</option>' + months.map(m => {
+    const [y, mo] = m.split('-');
+    const label = monthNames[parseInt(mo,10)-1] + ' ' + y;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (months.includes(current)) sel.value = current;
+}
+
 function exportCSV(){
+  const monthSel = document.getElementById('download-month-select');
+  const month = monthSel ? monthSel.value : '';
+  const filtered = month ? transactions.filter(t => t.date && t.date.slice(0,7) === month) : transactions;
+  if (month && filtered.length === 0) {
+    showToast('No transactions found for that month.', 'warn');
+    return;
+  }
   const h=['ID','Date','Customer','Invoice No','PNR','Pax','Trip','Dep','Arr','Receivable','Recv To','Payable','Platform','Paid Via','Firm','GST','Status','Partial Paid','Gross Profit','Comm?','Comm To','Comm Type','Comm Value','Comm Amt','GST Payable','Net Profit','Notes'];
-  const rows=transactions.map(t=>[t.id,t.date,t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const rows=filtered.map(t=>[t.id,t.date,t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'}));
-  a.download='SkyNexusTravels_'+new Date().toISOString().split('T')[0]+'.csv';
+  const suffix = month ? '_' + month : '_' + new Date().toISOString().split('T')[0];
+  a.download='SkyNexusTravels'+suffix+'.csv';
   a.click();
 }
 
@@ -3209,7 +3239,7 @@ function generateBillInvoice(txnId) {
   fnt('bold', 8.5); doc.text('SKY NEXUS TRAVELS', bX + 5, 34);
   fnt('normal', 7.5);
   doc.text('Fly the New Feeling', bX + 5, 38);
- doc.text('GST: 03BBNPM0322A1ZG', bX + 5, 42);
+  doc.text('GST: 03BBNPM0322A1ZG', bX + 5, 42);
 
   const metaX = bX + bW * 0.55;
   fnt('bold', 7.5);

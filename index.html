@@ -2364,7 +2364,7 @@ function renderTable() {
         ?`<span class="amount-purple">₹${fmt(t.commAmt)}</span><span class="cell-muted">${t.commType==='percentage'?t.commValue+'%':''} → ${t.commTo}</span>`
         :`<span class="amount-muted">—</span>`;
       return `<tr>
-        <td><span class="cell-muted">${start+i+1}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;display:block;">${t.date}</span></td>
+        <td><span class="cell-muted">${start+i+1}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;display:block;">${formatInvoiceDate(t.date)}</span></td>
         <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;"><strong>${t.customer}</strong>${t.txnType && t.txnType!=='New Booking'?`<span class="tag" style="font-size:9px;display:block;width:fit-content;margin-top:2px;${t.txnType==='Cancellation'?'color:var(--danger);border-color:rgba(239,83,80,0.4);background:rgba(239,83,80,0.08);':'color:var(--warn);border-color:rgba(255,167,38,0.4);background:rgba(255,167,38,0.08);'}" title="${t.relatedRef?'Original booking: '+t.relatedRef:''}">${t.txnType==='Cancellation'?'✖ Cancellation':'🔁 Date Change'}${t.relatedRef?' · '+t.relatedRef:''}</span>`:''}${t.notes?`<span class="cell-muted" title="${t.notes}">${t.notes.substring(0,18)}${t.notes.length>18?'…':''}</span>`:''}</td>
         <td style="font-weight:600;text-align:center;">${t.pax||'—'}</td>
         <td><div class="route-cell"><span class="route-from">${getCode(t.dep)}</span><span class="route-track"><span class="route-line"></span><span class="route-dot-l"></span><span class="route-plane">✈</span><span class="route-dot-r"></span></span><span class="route-to">${getCode(t.arr)}</span></div></td>

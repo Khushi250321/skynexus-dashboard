@@ -1003,6 +1003,18 @@
 
       <div class="form-section-title">Basic Information</div>
 
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>Transaction Nature <span class="req">✦</span></label>
+        <div class="toggle-group">
+          <input type="radio" name="txntype" id="txt-new" value="New Booking" checked>
+          <label for="txt-new">🆕 New Booking</label>
+          <input type="radio" name="txntype" id="txt-cancel" value="Cancellation">
+          <label for="txt-cancel">✖ Cancellation</label>
+          <input type="radio" name="txntype" id="txt-datechange" value="Date Change">
+          <label for="txt-datechange">🔁 Date Change</label>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Transaction Date <span class="req">✦</span></label>
         <input type="date" id="f-date">
@@ -1706,6 +1718,9 @@
       <div><label>Trip Type</label><select id="em-trip"><option>One Way</option><option>Round Trip</option></select></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label>Transaction Nature</label><select id="em-txntype"><option>New Booking</option><option>Cancellation</option><option>Date Change</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Receivable Amount (₹)</label><input type="number" id="em-recv-amt" min="0" step="0.01"></div>
       <div><label>Receivable To</label><select id="em-recv-to">
         <optgroup label="Bank Accounts">
@@ -2144,6 +2159,7 @@ function calcCommAmt(t) {
 }
 
 function saveTransaction() {
+  const txnType = document.querySelector('input[name="txntype"]:checked').value;
   const date = document.getElementById('f-date').value;
   const customer = document.getElementById('f-customer').value.trim();
   const invoiceNo = document.getElementById('f-invoice-no').value.trim();
@@ -2212,7 +2228,7 @@ function saveTransaction() {
   const netProfit = grossProfit - commAmt - gstPayable;
 
   transactions.unshift({
-    id:Date.now(), date, invoiceNo, pnr, customer, pax, tripType, dep, arr,
+    id:Date.now(), date, txnType, invoiceNo, pnr, customer, pax, tripType, dep, arr,
     recvAmt, recvTo, payAmt, platform, paidVia,
     profitFirm, gst, commApplicable, commTo, commType, commValue, commAmt,
     gstPayable, status, partialPaid, notes, grossProfit, netProfit
@@ -2243,6 +2259,7 @@ function clearForm() {
   document.querySelector('.status-pill.pending input').checked = true;
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('tt-one').checked = true;
+  document.getElementById('txt-new').checked = true;
   document.getElementById('pf-sky').checked = true;
   document.getElementById('gst-no').checked = true;
   document.getElementById('comm-no').checked = true;
@@ -2305,7 +2322,7 @@ function renderTable() {
         :`<span class="amount-muted">—</span>`;
       return `<tr>
         <td><span class="cell-muted">${start+i+1}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;display:block;">${t.date}</span></td>
-        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;"><strong>${t.customer}</strong>${t.notes?`<span class="cell-muted" title="${t.notes}">${t.notes.substring(0,18)}${t.notes.length>18?'…':''}</span>`:''}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;"><strong>${t.customer}</strong>${t.txnType && t.txnType!=='New Booking'?`<span class="tag" style="font-size:9px;display:block;width:fit-content;margin-top:2px;${t.txnType==='Cancellation'?'color:var(--danger);border-color:rgba(239,83,80,0.4);background:rgba(239,83,80,0.08);':'color:var(--warn);border-color:rgba(255,167,38,0.4);background:rgba(255,167,38,0.08);'}">${t.txnType==='Cancellation'?'✖ Cancellation':'🔁 Date Change'}</span>`:''}${t.notes?`<span class="cell-muted" title="${t.notes}">${t.notes.substring(0,18)}${t.notes.length>18?'…':''}</span>`:''}</td>
         <td style="font-weight:600;text-align:center;">${t.pax||'—'}</td>
         <td><div class="route-cell"><span class="route-from">${getCode(t.dep)}</span><span class="route-track"><span class="route-line"></span><span class="route-dot-l"></span><span class="route-plane">✈</span><span class="route-dot-r"></span></span><span class="route-to">${getCode(t.arr)}</span></div></td>
         <td><span class="tag" style="font-size:10px;">${t.tripType==='One Way'?'1-Way':'Rnd'}</span></td>
@@ -3000,8 +3017,8 @@ function exportCSV(){
     showToast('No transactions found for that month.', 'warn');
     return;
   }
-  const h=['ID','Date','Customer','Invoice No','PNR','Pax','Trip','Dep','Arr','Receivable','Recv To','Payable','Platform','Paid Via','Firm','GST','Status','Partial Paid','Gross Profit','Comm?','Comm To','Comm Type','Comm Value','Comm Amt','GST Payable','Net Profit','Notes'];
-  const rows=filtered.map(t=>[t.id,t.date,t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const h=['ID','Date','Txn Nature','Customer','Invoice No','PNR','Pax','Trip','Dep','Arr','Receivable','Recv To','Payable','Platform','Paid Via','Firm','GST','Status','Partial Paid','Gross Profit','Comm?','Comm To','Comm Type','Comm Value','Comm Amt','GST Payable','Net Profit','Notes'];
+  const rows=filtered.map(t=>[t.id,t.date,t.txnType||'New Booking',t.customer,t.invoiceNo||'',t.pnr||'',t.pax,t.tripType,t.dep,t.arr,t.recvAmt,t.recvTo,t.payAmt,t.platform,t.paidVia,t.profitFirm,t.gst,t.status,t.partialPaid||'',t.grossProfit,t.commApplicable,t.commTo||'',t.commType||'',t.commValue||'',t.commAmt||0,t.gstPayable||0,t.netProfit,t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'}));
   const suffix = month ? '_' + month : '_' + new Date().toISOString().split('T')[0];
@@ -3428,6 +3445,7 @@ function openEditModal(txnId) {
   document.getElementById('em-invoice').value = t.invoiceNo || '';
   setSelect('em-pax', t.pax || '1');
   setSelect('em-trip', t.tripType || 'One Way');
+  setSelect('em-txntype', t.txnType || 'New Booking');
   document.getElementById('em-recv-amt').value = t.recvAmt || 0;
   setSelect('em-recv-to', t.recvTo || '');
   document.getElementById('em-pay-amt').value = t.payAmt || 0;
@@ -3468,6 +3486,7 @@ function saveEditModal() {
   t.invoiceNo = document.getElementById('em-invoice').value.trim();
   t.pax = document.getElementById('em-pax').value;
   t.tripType = document.getElementById('em-trip').value;
+  t.txnType = document.getElementById('em-txntype').value;
   t.recvAmt = parseFloat(document.getElementById('em-recv-amt').value) || 0;
   t.recvTo = document.getElementById('em-recv-to').value.trim();
   t.payAmt = parseFloat(document.getElementById('em-pay-amt').value) || 0;

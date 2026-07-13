@@ -19,8 +19,8 @@ jobs:
       - name: Fetch data from Supabase
         run: |
           curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/app_data?select=key,value" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -o backup_raw.json
 
       - name: Save dated backup file

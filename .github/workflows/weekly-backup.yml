@@ -1,0 +1,39 @@
+name: Weekly Data Backup
+
+# Runs automatically every Sunday, and can be triggered manually
+# from the Actions tab any time you want an extra backup right now.
+on:
+  schedule:
+    - cron: '0 3 * * 0'   # 3:00 AM UTC every Sunday
+  workflow_dispatch:
+
+jobs:
+  backup-supabase-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch data from Supabase
+        run: |
+          curl -s "${{ secrets.SUPABASE_URL }}/rest/v1/app_data?select=key,value" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -o backup_raw.json
+
+      - name: Save dated backup file
+        run: |
+          mkdir -p backups
+          DATE=$(date +'%Y-%m-%d')
+          cp backup_raw.json "backups/backup_${DATE}.json"
+          rm backup_raw.json
+
+      - name: Commit and push backup
+        run: |
+          git config user.name "Backup Bot"
+          git config user.email "actions@github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Automated weekly backup"
+          git push

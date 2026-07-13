@@ -1386,6 +1386,7 @@
         <option value="">All Months</option>
       </select>
       <button class="btn-primary" style="padding:10px 20px;font-size:13px;" onclick="exportCSV()">⬇ Download</button>
+      <button class="btn-primary" style="padding:10px 20px;font-size:13px;background:linear-gradient(135deg,var(--teal),var(--accent));" onclick="backupAllData()" title="Download a full backup of everything (transactions, receipts, CC bills)">🛡 Backup Now</button>
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden;">
@@ -2532,7 +2533,7 @@ function renderActiveTransactions() {
       ? `<span style="font-size:10px;font-weight:700;color:var(--warn);">Pending</span>`
       : `<span style="font-size:10px;font-weight:700;color:var(--teal);">Partial</span>`;
     return `<tr>
-      <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-sub);">${t.date}</span></td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-sub);">${formatInvoiceDate(t.date)}</span></td>
       <td><strong style="font-size:13px;">${t.customer}</strong>${t.notes ? `<span style="font-size:10px;color:var(--text-dim);display:block;">${t.notes.substring(0,24)}${t.notes.length>24?'…':''}</span>` : ''}</td>
       <td><div class="route-cell"><span class="route-from">${getCode(t.dep)}</span><span class="route-track"><span class="route-line"></span><span class="route-dot-l"></span><span class="route-plane">✈</span><span class="route-dot-r"></span></span><span class="route-to">${getCode(t.arr)}</span></div></td>
       <td><span class="amount-positive" style="font-size:13px;">₹${fmt(t.recvAmt)}</span>${partial}</td>
@@ -2792,7 +2793,7 @@ function openCCHistory(cardKey) {
       const bal = balanceMap[item.type + '_' + item.id];
       const isCharge = item.type === 'charge';
       return `<tr>
-        <td>${item.date}</td>
+        <td>${formatInvoiceDate(item.date)}</td>
         <td><span class="cc-hist-type-badge ${isCharge ? 'cc-hist-type-charge' : 'cc-hist-type-pay'}">${isCharge ? 'Charge' : 'Payment'}</span></td>
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.detail}">${item.detail}</td>
         <td class="${isCharge ? 'cc-hist-charge' : 'cc-hist-payment'}">${isCharge ? '−' : '+'}₹${fmt(item.amount)}</td>
@@ -3052,6 +3053,20 @@ function populateMonthDownloadFilter(){
   if (months.includes(current)) sel.value = current;
 }
 
+function backupAllData() {
+  const backup = {
+    backupDate: new Date().toISOString(),
+    chugh_v1: transactions,
+    chugh_acc_receipts: accountReceipts,
+    chugh_cc_bills: ccBillPayments
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'}));
+  a.download = 'SkyNexus_Backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  showToast('✓ Backup downloaded — keep it somewhere safe!');
+}
+
 function exportCSV(){
   const monthSel = document.getElementById('download-month-select');
   const month = monthSel ? monthSel.value : '';
@@ -3093,6 +3108,7 @@ function numToWords(amount) {
   if (paise > 0) result += (result ? ' and ' : '') + convert(paise) + ' Paise';
   return (result || 'Zero') + ' Only';
 }
+
 function formatInvoiceDate(isoDate) {
   if (!isoDate || isoDate.length < 10) return isoDate || '';
   const [y, m, d] = isoDate.split('-');
@@ -3155,6 +3171,7 @@ function generateGSTInvoice(txnId) {
   fnt('normal', 7.5);
   doc.text(t.invoiceNo || '', metaX + 33, 34);
   doc.text(formatInvoiceDate(t.date), metaX + 33, 39.5);
+
   ln(bX, 52, bX+bW, 52, 0.4);
 
   fnt('bold', 8.5); doc.text('Bill To :', bX + 10, 59);
@@ -3420,7 +3437,7 @@ function openStatusModal(txnId) {
   _modalTxnId = txnId;
   _modalStatus = t.status;
   document.getElementById('smodal-customer').textContent =
-    t.customer + '  ·  ' + getCode(t.dep) + ' → ' + getCode(t.arr) + '  ·  ' + t.date;
+    t.customer + '  ·  ' + getCode(t.dep) + ' → ' + getCode(t.arr) + '  ·  ' + formatInvoiceDate(t.date);
   ['smodal-pending','smodal-done','smodal-partial'].forEach(id =>
     document.getElementById(id).classList.remove('selected')
   );
@@ -3486,7 +3503,7 @@ function openEditModal(txnId) {
     }
     sel.value = val;
   }
-  document.getElementById('edit-modal-sub').textContent = `ID: ${t.id} · ${t.customer} · ${t.date}`;
+  document.getElementById('edit-modal-sub').textContent = `ID: ${t.id} · ${t.customer} · ${formatInvoiceDate(t.date)}`;
   document.getElementById('em-customer').value = t.customer || '';
   document.getElementById('em-date').value = t.date || '';
   updateDateConfirm('em-date','em-date-confirm');
@@ -3687,7 +3704,7 @@ function openGSTSetupModal(txnId) {
 
   // Header info
   document.getElementById('gst-modal-info').textContent =
-    t.customer + '  ·  ' + getCode(t.dep) + ' → ' + getCode(t.arr) + '  ·  ' + t.date;
+    t.customer + '  ·  ' + getCode(t.dep) + ' → ' + getCode(t.arr) + '  ·  ' + formatInvoiceDate(t.date);
 
   // Gross profit bar
   const gross = t.grossProfit || 0;

@@ -1725,6 +1725,12 @@
       <div><label>Trip Type</label><select id="em-trip"><option>One Way</option><option>Round Trip</option></select></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label>Departure Airport</label><select id="em-dep" onchange="handleEmAirportOther('dep')"></select>
+        <input type="text" class="other-input" id="em-dep-other" placeholder="Enter airport name &amp; code"></div>
+      <div><label>Arrival Airport</label><select id="em-arr" onchange="handleEmAirportOther('arr')"></select>
+        <input type="text" class="other-input" id="em-arr-other" placeholder="Enter airport name &amp; code"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Transaction Nature</label><select id="em-txntype" onchange="onEmTxnTypeChange()"><option>New Booking</option><option>Cancellation</option><option>Date Change</option></select></div>
       <div id="em-related-ref-wrap" style="display:none;"><label>Original Booking PNR/Invoice No.</label><input type="text" id="em-related-ref" style="text-transform:uppercase;"></div>
     </div>
@@ -1765,7 +1771,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
       <div><label>Commission</label><select id="em-comm" onchange="document.getElementById('em-comm-details').style.display=this.value==='Yes'?'grid':'none';"><option value="Not Applicable">Not Applicable</option><option value="Yes">Yes</option></select></div>
       <div id="em-comm-details" style="display:none;grid-column:span 2;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div><label>To</label><select id="em-comm-to"><option value="Sanchit">Sanchit</option><option value="Jyoti">Jyoti</option></select></div>
+        <div><label>To</label><select id="em-comm-to" onchange="document.getElementById('em-comm-to-custom').classList.toggle('visible',this.value==='Custom')"><option value="Sanchit">Sanchit</option><option value="Jyoti">Jyoti</option><option value="Custom">Custom (specify)</option></select><input type="text" class="other-input" id="em-comm-to-custom" placeholder="Enter name"></div>
         <div><label>Type</label><select id="em-comm-type"><option value="percentage">% of Profit</option><option value="absolute">₹ Fixed</option></select></div>
         <div><label>Value</label><input type="number" id="em-comm-value" min="0" step="0.01"></div>
       </div>
@@ -2047,7 +2053,7 @@ function init() {
   document.getElementById('currentDate').textContent = today.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('f-date').value = today.toISOString().split('T')[0];
   updateDateConfirm('f-date','f-date-confirm');
-  ['f-dep','f-arr'].forEach(id => {
+  ['f-dep','f-arr','em-dep','em-arr'].forEach(id => {
     const s = document.getElementById(id);
     s.innerHTML = '<option value="">— Select Airport —</option>';
     AIRPORTS.forEach(a => {
@@ -2070,6 +2076,10 @@ function updateCustomerSuggestions() {
   dl.innerHTML = names.map(n => `<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
 
+function handleEmAirportOther(t) {
+  const s = document.getElementById(`em-${t}`), o = document.getElementById(`em-${t}-other`);
+  s.value === 'other' ? (o.classList.add('visible'), o.focus()) : o.classList.remove('visible');
+}
 function handleAirportOther(t) {
   const s = document.getElementById(`f-${t}`), o = document.getElementById(`f-${t}-other`);
   s.value === 'other' ? (o.classList.add('visible'), o.focus()) : o.classList.remove('visible');
@@ -3511,6 +3521,10 @@ function openEditModal(txnId) {
   document.getElementById('em-invoice').value = t.invoiceNo || '';
   setSelect('em-pax', t.pax || '1');
   setSelect('em-trip', t.tripType || 'One Way');
+  setSelect('em-dep', t.dep || '');
+  setSelect('em-arr', t.arr || '');
+  document.getElementById('em-dep-other').classList.remove('visible');
+  document.getElementById('em-arr-other').classList.remove('visible');
   setSelect('em-txntype', t.txnType || 'New Booking');
   document.getElementById('em-related-ref').value = t.relatedRef || '';
   document.getElementById('em-related-ref-wrap').style.display =
@@ -3527,6 +3541,7 @@ function openEditModal(txnId) {
   if (t.commApplicable === 'Yes') {
     commDet.style.display = 'grid';
     setSelect('em-comm-to', t.commTo || 'SkyNexus');
+    document.getElementById('em-comm-to-custom').classList.remove('visible');
     setSelect('em-comm-type', t.commType || 'percentage');
     document.getElementById('em-comm-value').value = t.commValue || 0;
   } else { commDet.style.display = 'none'; }
@@ -3555,6 +3570,12 @@ function saveEditModal() {
   t.invoiceNo = document.getElementById('em-invoice').value.trim();
   t.pax = document.getElementById('em-pax').value;
   t.tripType = document.getElementById('em-trip').value;
+  {
+    const dSel = document.getElementById('em-dep').value;
+    const aSel = document.getElementById('em-arr').value;
+    t.dep = dSel === 'other' ? (document.getElementById('em-dep-other').value.trim() || t.dep) : (dSel || t.dep);
+    t.arr = aSel === 'other' ? (document.getElementById('em-arr-other').value.trim() || t.arr) : (aSel || t.arr);
+  }
   t.txnType = document.getElementById('em-txntype').value;
   t.relatedRef = (t.txnType === 'Cancellation' || t.txnType === 'Date Change')
     ? document.getElementById('em-related-ref').value.trim().toUpperCase() : '';
@@ -3570,7 +3591,7 @@ function saveEditModal() {
   t.gst = (t.profitFirm === 'Sanchit') ? 'No' : document.getElementById('em-gst').value;
   t.commApplicable = document.getElementById('em-comm').value;
   if (t.commApplicable === 'Yes') {
-    t.commTo = document.getElementById('em-comm-to').value.trim();
+    { const c = document.getElementById('em-comm-to').value.trim(); t.commTo = c === 'Custom' ? (document.getElementById('em-comm-to-custom').value.trim() || 'Custom') : c; }
     t.commType = document.getElementById('em-comm-type').value;
     t.commValue = parseFloat(document.getElementById('em-comm-value').value) || 0;
   } else { t.commTo = ''; t.commType = 'percentage'; t.commValue = 0; }
